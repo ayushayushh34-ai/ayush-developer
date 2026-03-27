@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>CSK vs RCB - Ultimate Tic Tac Toe</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            background: linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)), url('https://images.unsplash.com/photo-1531415074968-036ba1b575da?auto=format&fit=crop&q=80&w=1000');
+            background-size: cover;
+            background-position: center;
+            overflow-x: hidden;
+        }
+
+        #start-overlay, #settings-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+        }
+
+        #settings-modal { display: none; z-index: 101; }
+
+        .start-btn {
+            padding: 15px 40px;
+            font-size: 1.5rem;
+            background: #fdb913;
+            border: none;
+            border-radius: 50px;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(253, 185, 19, 0.4);
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 360px;
+        }
+
+        .scoreboard {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 10px;
+            background: rgba(0, 0, 0, 0.85);
+            padding: 10px 20px;
+            border-radius: 15px;
+            color: white;
+            border: 2px solid gold;
+        }
+
+        .mode-selector {
+            width: 100%;
+            margin-bottom: 10px;
+            display: flex;
+            gap: 5px;
+        }
+
+        select {
+            padding: 10px;
+            border-radius: 8px;
+            border: none;
+            background: white;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        .match-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+
+        .team-logo { width: 55px; height: 55px; object-fit: contain; }
+        .vs-text { color: white; font-weight: 900; font-size: 1.2rem; }
+
+        .status {
+            background: white;
+            padding: 10px;
+            border-radius: 50px;
+            font-weight: bold;
+            margin-bottom: 15px;
+            width: 100%;
+            text-align: center;
+        }
+
+        .board {
+            display: grid;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 12px;
+            border-radius: 20px;
+            width: 100%;
+            aspect-ratio: 1/1;
+        }
+
+        .cell {
+            background: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            cursor: pointer;
+        }
+
+        .grid-3 .cell { font-size: 2.5rem; }
+        .grid-5 .cell { font-size: 1.8rem; }
+        .grid-7 .cell { font-size: 1.3rem; }
+
+        .cell.win-animate { background: #4CAF50 !important; color: white !important; transform: scale(1.05); }
+        .cell.x { color: #fdb913; }
+        .cell.o { color: #f51f1f; }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        button.action-btn {
+            padding: 12px;
+            font-size: 1rem;
+            font-weight: 800;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+        }
+
+        #retry-btn { background: #4CAF50; color: white; display: none; }
+        #restart-btn { background: #838181; color: white; }
+        .settings-trigger { background: white; border: none; border-radius: 50%; width: 40px; height: 40px; cursor: pointer; font-size: 1.2rem; }
+    </style>
+</head>
+<body>
+
+<div id="start-overlay">
+    <h1 style="margin: 0;">CSK vs RCB</h1>
+    <h2 style="margin: 0 0 20px 0; font-weight: 300;">Tic Tac Toe</h2>
+    <button class="start-btn" onclick="startGame()">START GAME 🏏</button>
+</div>
+
+<div id="settings-modal">
+    <h2>Game Settings ⚙️</h2>
+    <div style="margin: 20px 0; width: 80%;">
+        <label>Grid Size:</label>
+        <select id="gridSize" style="margin-top:10px;">
+            <option value="3">3 x 3 (Win with 3)</option>
+            <option value="5">5 x 5 (Win with 4)</option>
+            <option value="7">7 x 7 (Win with 4)</option>
+        </select>
+    </div>
+    <div style="margin: 20px 0; width: 80%;">
+        <label>Sound Effects:</label>
+        <select id="soundToggle" style="margin-top:10px;">
+            <option value="on">On 🔊</option>
+            <option value="off">Off 🔇</option>
+        </select>
+    </div>
+    <button class="start-btn" onclick="applySettings()" style="font-size: 1rem;">Save & Apply</button>
+</div>
+
+<div class="container">
+    <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 5px;">
+        <h3 style="color: white; margin: 0;">Ayush Developer</h3>
+        <button class="settings-trigger" onclick="openSettings()">⚙️</button>
+    </div>
+    
+    <div class="scoreboard">
+        <div>CSK: <span id="csk-score">0</span></div>
+        <div>RCB: <span id="rcb-score">0</span></div>
+    </div>
+
+    <div class="mode-selector">
+        <select id="gameMode" onchange="resetGame()">
+            <option value="friends">Play with Friends</option>
+            <option value="normal">Computer: Normal</option>
+            <option value="high">Computer: High</option>
+            <option value="possible">Computer: Possible (Hard)</option>
+        </select>
+    </div>
+    
+    <div class="match-header">
+        <img src="https://upload.wikimedia.org/wikipedia/en/2/2b/Chennai_Super_Kings_Logo.svg" class="team-logo">
+        <div class="vs-text">VS</div>
+        <img src="https://i.ibb.co/Xf8Yv78Z/rcb-logo.jpg" class="team-logo">
+    </div>
+
+    <div class="status" id="statusText">CSK Turn (X)</div>
+
+    <div class="board grid-3" id="board"></div>
+
+    <div class="btn-group">
+        <button id="retry-btn" class="action-btn" onclick="resetGame()">NEXT ROUND 🏏</button>
+        <button id="restart-btn" class="action-btn" onclick="fullRestart()">RESTART GAME 🔄</button>
+    </div>
+</div>
+
+<script>
+    const boardEl = document.getElementById('board');
+    const statusText = document.getElementById('statusText');
+    const retryBtn = document.getElementById('retry-btn');
+    const gameModeSelect = document.getElementById('gameMode');
+    
+    let size = 3;
+    let winCount = 3;
+    let currentPlayer = "X"; 
+    let gameState = [];
+    let gameActive = true;
+    let scores = { X: 0, O: 0 };
+
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playBeep(freq) {
+        if (document.getElementById('soundToggle').value === 'off') return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+    }
+
+    function startGame() { document.getElementById('start-overlay').style.display = 'none'; }
+    function openSettings() { document.getElementById('settings-modal').style.display = 'flex'; }
+    function applySettings() {
+        size = parseInt(document.getElementById('gridSize').value);
+        winCount = size === 3 ? 3 : 4;
+        document.getElementById('settings-modal').style.display = 'none';
+        fullRestart();
+    }
+
+    function initBoard() {
+        boardEl.innerHTML = '';
+        boardEl.style.gridTemplateColumns = `repeat(${size}, 1fr)`;
+        boardEl.className = `board grid-${size}`;
+        gameState = Array(size * size).fill("");
+        for (let i = 0; i < size * size; i++) {
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+            cell.setAttribute('data-index', i);
+            cell.addEventListener('click', handleCellClick);
+            boardEl.appendChild(cell);
+        }
+    }
+
+    function handleCellClick(e) {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (gameState[idx] !== "" || !gameActive || (currentPlayer === "O" && gameModeSelect.value !== 'friends')) return;
+        makeMove(idx);
+        if (gameActive && gameModeSelect.value !== 'friends') setTimeout(computerMove, 500);
+    }
+
+    function makeMove(idx) {
+        gameState[idx] = currentPlayer;
+        boardEl.children[idx].innerText = currentPlayer;
+        boardEl.children[idx].classList.add(currentPlayer.toLowerCase());
+        playBeep(currentPlayer === "X" ? 400 : 500);
+        checkResult(idx);
+    }
+
+    function computerMove() {
+        if (!gameActive) return;
+        const mode = gameModeSelect.value;
+        let move;
+        const avail = gameState.map((v, i) => v === "" ? i : null).filter(v => v !== null);
+
+        if (mode === "normal") {
+            move = avail[Math.floor(Math.random() * avail.length)];
+        } else {
+            move = getBestMoveSmart(avail);
+        }
+        if (move !== null) makeMove(move);
+    }
+
+    function getBestMoveSmart(avail) {
+        for (let i of avail) {
+            gameState[i] = "O"; if (checkWinInternal(i)) { gameState[i] = ""; return i; }
+            gameState[i] = "X"; if (checkWinInternal(i)) { gameState[i] = ""; return i; }
+            gameState[i] = "";
+        }
+        return avail[Math.floor(Math.random() * avail.length)];
+    }
+
+    function checkWinInternal(lastIdx) {
+        const r = Math.floor(lastIdx / size);
+        const c = lastIdx % size;
+        const dirs = [[0,1], [1,0], [1,1], [1,-1]];
+        for (let [dr, dc] of dirs) {
+            let count = 1;
+            [[dr, dc], [-dr, -dc]].forEach(([sr, sc]) => {
+                let cr = r + sr, cc = c + sc;
+                while (cr>=0 && cr<size && cc>=0 && cc<size && gameState[cr*size+cc] === gameState[lastIdx]) {
+                    count++; cr += sr; cc += sc;
+                }
+            });
+            if (count >= winCount) return true;
+        }
+        return false;
+    }
+
+    function checkResult(lastIdx) {
+        if (checkWinInternal(lastIdx)) {
+            scores[currentPlayer]++;
+            updateScoreboard();
+            statusText.innerText = `🏆 ${currentPlayer === "X" ? "CSK" : "RCB"} WINS!`;
+            confetti({ particleCount: 150, spread: 70 });
+            gameActive = false; retryBtn.style.display = "block";
+            return;
+        }
+        if (!gameState.includes("")) {
+            statusText.innerText = "🤝 DRAW MATCH!";
+            gameActive = false; retryBtn.style.display = "block";
+            return;
+        }
+        currentPlayer = currentPlayer === "X" ? "O" : "X";
+        statusText.innerText = `${currentPlayer === "X" ? "CSK" : "RCB"} Turn`;
+    }
+
+    function updateScoreboard() {
+        document.getElementById('csk-score').innerText = scores.X;
+        document.getElementById('rcb-score').innerText = scores.O;
+    }
+
+    function resetGame() {
+        currentPlayer = "X";
+        gameActive = true;
+        statusText.innerText = "CSK Turn (X)";
+        retryBtn.style.display = "none";
+        initBoard();
+    }
+
+    function fullRestart() {
+        scores = { X: 0, O: 0 };
+        updateScoreboard();
+        resetGame();
+    }
+
+    initBoard();
+</script>
+</body>
+</html>
